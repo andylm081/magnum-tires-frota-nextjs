@@ -1,0 +1,57 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["dataProxy", "multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "auth"]
+}
+
+// Enum para os tipos de role
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+
+  @@schema("auth")  // Especifica que o enum Role deve ser armazenado no schema "auth"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     // Agora utilizando o enum Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  Profile      Profile?
+
+  @@schema("auth")  // Especifica que o modelo User está no schema "auth"
+  @@index([email])  // Índice no email para melhorar a performance das consultas
+}
+
+model Invite {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  role      Role     // Role para convidado também usa o enum
+  createdAt DateTime @default(now())
+
+  @@schema("auth")  // Especifica que o modelo Invite está no schema "auth"
+  @@index([token])  // Índice no token para melhorar a performance
+}
+
+model Profile {
+  id           String   @id
+  nomeCompleto String
+  telefone     String
+  cpf          String
+  cargo        String
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@schema("public")  // Especifica que o modelo Profile está no schema "public"
+}
