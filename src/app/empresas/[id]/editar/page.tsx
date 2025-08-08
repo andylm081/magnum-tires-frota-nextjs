@@ -92,7 +92,6 @@ export default function EditarEmpresaPage() {
       const res = await fetch(`/api/empresas/${id}`);
       if (!res.ok) throw new Error('Falha ao buscar dados da empresa.');
       const data = await res.json();
-      // Prefill only known keys:
       const prefilled: EmpresaFormData = { ...initialFormState };
       Object.keys(prefilled).forEach(key => {
         if (key === 'anexos') {
@@ -170,7 +169,8 @@ export default function EditarEmpresaPage() {
   const validateForm = () => {
     const errs: Partial<Record<keyof EmpresaFormData,string>> = {};
     if (!formData.razao_social.trim()) errs.razao_social = 'Razão Social é obrigatória.';
-    if (!formData.cnpj.trim())          errs.cnpj           = 'CNPJ é obrigatório.';
+    if (!formData.cnpj.trim()) errs.cnpj = 'CNPJ é obrigatório.';
+    if (!formData.cidade.trim()) errs.cidade = 'Cidade é obrigatória.'; // <-- VALIDAÇÃO ADICIONADA
     return errs;
   };
 
@@ -184,7 +184,6 @@ export default function EditarEmpresaPage() {
     }
     setIsSubmitting(true);
 
-    // Upload new attachments
     let anexosAtualizados = [...formData.anexos];
     if (selectedFiles.length) {
       setFeedback({ type: 'info', message: `Enviando ${selectedFiles.length} anexo(s)...` });
@@ -202,7 +201,6 @@ export default function EditarEmpresaPage() {
       }
     }
 
-    // Prepare payload
     const payload = { ...formData, anexos: anexosAtualizados };
     Object.entries(payload).forEach(([k,v]) => {
       if (v === '') (payload as any)[k] = null;
@@ -278,59 +276,27 @@ export default function EditarEmpresaPage() {
               <label htmlFor="razao_social">
                 Razão Social <span style={{ color: 'var(--magnum-red-status)' }}>*</span>
               </label>
-              <input
-                id="razao_social"
-                name="razao_social"
-                type="text"
-                value={formData.razao_social}
-                onChange={handleChange}
-                style={errors.razao_social ? { borderColor: 'var(--magnum-red-status)' } : {}}
-              />
+              <input id="razao_social" name="razao_social" type="text" value={formData.razao_social} onChange={handleChange} style={errors.razao_social ? { borderColor: 'var(--magnum-red-status)' } : {}} />
               {renderError('razao_social')}
             </div>
             <div className="form-item">
               <label htmlFor="nome_fantasia">Nome Fantasia</label>
-              <input
-                id="nome_fantasia"
-                name="nome_fantasia"
-                type="text"
-                value={formData.nome_fantasia}
-                onChange={handleChange}
-              />
+              <input id="nome_fantasia" name="nome_fantasia" type="text" value={formData.nome_fantasia} onChange={handleChange} />
             </div>
             <div className="form-item">
               <label htmlFor="cnpj">
                 CNPJ <span style={{ color: 'var(--magnum-red-status)' }}>*</span>
               </label>
-              <input
-                id="cnpj"
-                name="cnpj"
-                type="text"
-                value={formData.cnpj}
-                onChange={handleChange}
-                style={errors.cnpj ? { borderColor: 'var(--magnum-red-status)' } : {}}
-              />
+              <input id="cnpj" name="cnpj" type="text" value={formData.cnpj} onChange={handleChange} style={errors.cnpj ? { borderColor: 'var(--magnum-red-status)' } : {}} />
               {renderError('cnpj')}
             </div>
             <div className="form-item">
               <label htmlFor="inscricao_estadual">Inscrição Estadual</label>
-              <input
-                id="inscricao_estadual"
-                name="inscricao_estadual"
-                type="text"
-                value={formData.inscricao_estadual}
-                onChange={handleChange}
-              />
+              <input id="inscricao_estadual" name="inscricao_estadual" type="text" value={formData.inscricao_estadual} onChange={handleChange} />
             </div>
             <div className="form-item">
               <label htmlFor="inscricao_municipal">Inscrição Municipal</label>
-              <input
-                id="inscricao_municipal"
-                name="inscricao_municipal"
-                type="text"
-                value={formData.inscricao_municipal}
-                onChange={handleChange}
-              />
+              <input id="inscricao_municipal" name="inscricao_municipal" type="text" value={formData.inscricao_municipal} onChange={handleChange} />
             </div>
           </div>
         </div>
@@ -360,8 +326,11 @@ export default function EditarEmpresaPage() {
               <input id="bairro" name="bairro" type="text" value={formData.bairro} onChange={handleChange}/>
             </div>
             <div className="form-item">
-              <label htmlFor="cidade">Cidade</label>
-              <input id="cidade" name="cidade" type="text" value={formData.cidade} onChange={handleChange}/>
+              <label htmlFor="cidade">
+                Cidade <span style={{ color: 'var(--magnum-red-status)' }}>*</span>
+              </label>
+              <input id="cidade" name="cidade" type="text" value={formData.cidade} onChange={handleChange} style={errors.cidade ? { borderColor: 'var(--magnum-red-status)' } : {}}/>
+              {renderError('cidade')}
             </div>
             <div className="form-item">
               <label htmlFor="uf">UF</label>

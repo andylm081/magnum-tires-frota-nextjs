@@ -1,40 +1,30 @@
-// src/app/api/admin/users/route.js
+// Ficheiro 2: src/app/api/admin/users/route.ts
+
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]/route';
+import prisma from '@/lib/prisma';
 
-export async function GET() {
-  const supabase = createRouteHandlerClient({ cookies });
+export async function GET(request: Request) {
+    const session = await getServerSession(authOptions);
+    if (session?.user?.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+    }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-
-  const userRole = session.user.user_role;
-  if (userRole !== 'admin') {
-    return NextResponse.json({ error: 'Acesso negado. Requer privilégios de administrador.' }, { status: 403 });
-  }
-
-  try {
-    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
-    if (error) throw error;
-
-    // Extrai apenas os campos desejados, incluindo user_role
-    const formattedUsers = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      user_role: user.user_metadata?.user_role || user.app_metadata?.user_role || null,
-      last_sign_in_at: user.last_sign_in_at,
-      email_confirmed_at: user.email_confirmed_at,
-      user_metadata: user.user_metadata,
-      app_metadata: user.app_metadata,
-    }));
-
-    return NextResponse.json(formattedUsers);
-  } catch (error) {
-    console.error("Erro na API ao listar utilizadores:", error);
-    return NextResponse.json({ error: 'Falha ao buscar a lista de utilizadores.', details: error.message }, { status: 500 });
-  }
+    try {
+        const users = await prisma.user.findMany({
+            include: {
+                Profile: true, // Inclui os dados do perfil associado
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        return NextResponse.json(users, { status: 200 });
+    } catch (error) {
+        console.error("Erro ao buscar utilizadores:", error);
+        return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
+    }
 }

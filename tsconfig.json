@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "module": "esnext",
-    "jsx": "preserve", // Corrigido para "react-jsx"
+    "module": "commonjs",
+    "jsx": "preserve",
     "moduleResolution": "node",
     "allowJs": true,
     "esModuleInterop": true,
@@ -11,33 +11,24 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": false,
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "noEmit": true,
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "src/*"
-      ]
-    }
+    "paths": { "@/*": ["src/*"] },
+    "plugins": [{ "name": "next" }],
+
+    // 1) Adicione typeRoots
+    "typeRoots": ["src/types", "node_modules/@types"]
   },
   "include": [
+    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "next-env.d.ts",
     ".next/types/**/*.ts",
-    "src/components/FormPageLayout.tsx"
+
+    // 2) Inclua sua pasta de declarações
+    "src/types/**/*.d.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

@@ -1,232 +1,242 @@
+// src/app/admin/usuarios/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import ConfirmationModal from '@/components/ConfirmationModal';
 
 const IconUserPlus = () => (
+ <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="currentColor">
+   <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+ </svg>
+);
+
+// Ícones para as ações da tabela
+const IconEdit = () => (
   <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="currentColor">
-    <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
   </svg>
 );
 
+const IconDelete = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="currentColor">
+    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+  </svg>
+);
+
+
 export default function GerenciarUsuariosPage() {
-  const supabase = createClientComponentClient();
-  const [user, setUser] = useState(null);
-  const [accessDenied, setAccessDenied] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [editData, setEditData] = useState({ email: '', user_role: '' });
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('utilizador');
-  const [isInviting, setIsInviting] = useState(false);
-  const [feedback, setFeedback] = useState({ type: '', message: '' });
-  const [isLoading, setIsLoading] = useState(true);
+ const { data: session, status } = useSession();
+ const router = useRouter();
 
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/admin/users');
-      const data = await res.json();
-      if (res.ok) setUsers(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+ const [users, setUsers] = useState<any[]>([]);
+ const [selectedUser, setSelectedUser] = useState<any>(null);
+ const [showEditModal, setShowEditModal] = useState(false);
+ const [showDeleteModal, setShowDeleteModal] = useState(false);
+ const [editData, setEditData] = useState({ email: '', role: '' });
 
-  useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUser = session?.user;
-      setUser(currentUser);
-      // CORRIGIDO: user_role agora em user_metadata
-      if (currentUser?.user_metadata?.user_role !== 'admin') {
-        setAccessDenied(true);
-      } else {
-        fetchUsers();
-      }
-    };
-    init();
-  }, [fetchUsers, supabase]);
+ const [inviteEmail, setInviteEmail] = useState('');
+ const [inviteRole, setInviteRole] = useState('USER');
+ const [isInviting, setIsInviting] = useState(false);
 
-  const handleInviteSubmit = async (e) => {
-    e.preventDefault();
-    setIsInviting(true);
-    try {
-      const res = await fetch('/api/admin/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setFeedback({ type: 'success', message: data.message });
-        setInviteEmail('');
-        setTimeout(fetchUsers, 1500);
-      } else {
-        setFeedback({ type: 'error', message: data.error });
-      }
-    } catch (err) {
-      setFeedback({ type: 'error', message: err.message });
-    } finally {
-      setIsInviting(false);
-    }
-  };
+ const [feedback, setFeedback] = useState({ type: '', message: '' });
+ const [isLoading, setIsLoading] = useState(true);
 
-  const openEditModal = (user) => {
-    setSelectedUser(user);
-    setEditData({
-      email: user.email,
-      user_role: user.app_metadata?.role || '',
-    });
-    setShowEditModal(true);
-  };
+ const fetchUsers = useCallback(async () => {
+   try {
+     const res = await fetch('/api/admin/users');
+     if (!res.ok) throw new Error('Falha ao buscar utilizadores');
+     const data = await res.json();
+     setUsers(data);
+   } catch (err: any) {
+     setFeedback({ type: 'error', message: err.message });
+   } finally {
+     setIsLoading(false);
+   }
+ }, []);
 
-  const handleEditSave = async () => {
-    const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editData),
-    });
-    if (res.ok) {
-      setShowEditModal(false);
-      fetchUsers();
-    } else {
-      alert('Erro ao editar usuário');
-    }
-  };
+ useEffect(() => {
+   if (status === 'authenticated') {
+     if (session.user?.role === 'ADMIN') {
+       fetchUsers();
+     } else {
+       router.push('/'); // Redireciona se não for admin
+     }
+   }
+   if (status === 'unauthenticated') {
+     router.push('/login');
+   }
+ }, [status, session, router, fetchUsers]);
 
-  const confirmDeleteUser = (user) => {
-    setSelectedUser(user);
-    setShowDeleteModal(true);
-  };
+ const handleInviteSubmit = async (e: React.FormEvent) => {
+   e.preventDefault();
+   setIsInviting(true);
+   setFeedback({ type: '', message: '' });
+   try {
+     const res = await fetch('/api/admin/invite', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+     });
+     const data = await res.json();
+     if (!res.ok) throw new Error(data.error);
 
-  const handleDelete = async () => {
-    const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
-      method: 'DELETE',
-    });
-    if (res.ok) {
-      setShowDeleteModal(false);
-      fetchUsers();
-    } else {
-      alert('Erro ao remover usuário');
-    }
-  };
+     setFeedback({ type: 'success', message: data.message });
+     setInviteEmail('');
+     fetchUsers(); // Atualiza a lista de utilizadores
+   } catch (err: any) {
+     setFeedback({ type: 'error', message: err.message });
+   } finally {
+     setIsInviting(false);
+   }
+ };
 
-  if (accessDenied) {
-    return <div className="card"><h1 className="page-title">Acesso Negado</h1></div>;
-  }
+ const openEditModal = (user: any) => {
+   setSelectedUser(user);
+   setEditData({ email: user.email, role: user.role });
+   setShowEditModal(true);
+ };
 
-  return (
-    <div className="main-content-area">
-      <div className="page-header">
-        <h1 className="page-title">Gerenciamento de Utilizadores</h1>
-      </div>
+ const handleEditSave = async () => {
+   try {
+     const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+       method: 'PATCH',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify(editData),
+     });
+     if (!res.ok) throw new Error('Falha ao editar utilizador');
+     setShowEditModal(false);
+     fetchUsers();
+   } catch (err) {
+     alert((err as Error).message);
+   }
+ };
 
-      <div className="card">
-        <h2 className="section-title">Convidar Novo Utilizador</h2>
-        {feedback.message && <div className={`form-feedback-message ${feedback.type}`}>{feedback.message}</div>}
-        <form onSubmit={handleInviteSubmit} className="form-grid cols-3 align-items-end">
-          <div className="form-item">
-            <label>Email</label>
-            <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required />
-          </div>
-          <div className="form-item">
-            <label>Função</label>
-            <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-              <option value="utilizador">Utilizador</option>
-              <option value="admin">Administrador</option>
-            </select>
-          </div>
-          <div className="form-item">
-            <button className="btn btn-primary" type="submit" disabled={isInviting}>
-              <IconUserPlus />
-              {isInviting ? 'A Enviar...' : 'Enviar Convite'}
-            </button>
-          </div>
-        </form>
-      </div>
+ const openDeleteModal = (user: any) => {
+   setSelectedUser(user);
+   setShowDeleteModal(true);
+ };
 
-      <div className="card table-container">
-        <h2 className="section-title">Utilizadores Registados</h2>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Função</th>
-              <th>Último Acesso</th>
-              <th>Status</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.length === 0 ? (
-              // CORRIGIDO: colSpan é número, não string!
-              <tr><td colSpan={5}>Nenhum utilizador encontrado.</td></tr>
-            ) : (
-              users.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.email}</td>
-                  <td>
-                    {u.app_metadata?.role === 'admin'
-                      ? 'Administrador'
-                      : u.app_metadata?.role === 'utilizador'
-                      ? 'Utilizador'
-                      : 'N/A'}
-                  </td>
-                  <td>{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString('pt-BR') : 'Nunca'}</td>
-                  <td>{u.email_confirmed_at ? 'Confirmado' : 'Aguardando'}</td>
-                  <td>
-                    <button className="btn btn-sm btn-outline-dark" onClick={() => openEditModal(u)}>Editar</button>
-                    <button className="btn btn-sm btn-outline-danger" onClick={() => confirmDeleteUser(u)} style={{ marginLeft: '0.5rem' }}>Remover</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+ const handleDelete = async () => {
+   try {
+     const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+       method: 'DELETE',
+     });
+     if (!res.ok) throw new Error('Falha ao remover utilizador');
+     setShowDeleteModal(false);
+     fetchUsers();
+   } catch (err) {
+     alert((err as Error).message);
+   }
+ };
 
-      {/* Modal de Edição */}
-      {showEditModal && (
-        <div className="modal-overlay open">
-          <div className="modal-content" style={{ maxWidth: 480 }}>
-            <h2>Editar Utilizador</h2>
-            <div className="form-item">
-              <label>Email</label>
-              <input type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} />
-            </div>
-            <div className="form-item">
-              <label>Função</label>
-              <select value={editData.user_role} onChange={(e) => setEditData({ ...editData, user_role: e.target.value })}>
-                <option value="utilizador">Utilizador</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </div>
-            <div className="modal-footer" style={{ marginTop: '1.5rem' }}>
-              <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleEditSave}>Salvar</button>
-            </div>
-          </div>
-        </div>
-      )}
+ if (status === 'loading' || isLoading) {
+   return <main className="main-content-area"><div className="card">A carregar...</div></main>;
+ }
 
-      {/* Modal de Remoção */}
-      {showDeleteModal && (
-        <div className="modal-overlay open">
-          <div className="modal-content" style={{ maxWidth: 420 }}>
-            <h2>Confirmar Remoção</h2>
-            <p>Deseja mesmo remover o utilizador <strong>{selectedUser?.email}</strong>?</p>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
-              <button className="btn btn-danger" onClick={handleDelete}>Remover</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+ return (
+   <>
+     <main className="main-content-area">
+       <div className="page-header">
+         <h1 className="page-title">Gerenciamento de Utilizadores</h1>
+       </div>
+
+       <div className="card">
+         <h2 className="section-title">Convidar Novo Utilizador</h2>
+         {feedback.message && <div className={`form-feedback-message ${feedback.type}`}>{feedback.message}</div>}
+         <form onSubmit={handleInviteSubmit} className="form-grid cols-3 align-items-end">
+           <div className="form-item">
+             <label>Email</label>
+             <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required />
+           </div>
+           <div className="form-item">
+             <label>Função</label>
+             <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+               <option value="USER">Utilizador</option>
+               <option value="MODERATOR">Moderador</option>
+               <option value="ADMIN">Administrador</option>
+             </select>
+           </div>
+           <div className="form-item">
+             <button className="btn btn-primary" type="submit" disabled={isInviting}>
+               <IconUserPlus />
+               {isInviting ? 'A Enviar...' : 'Enviar Convite'}
+             </button>
+           </div>
+         </form>
+       </div>
+
+       <div className="card table-container">
+         <h2 className="section-title">Utilizadores Registados</h2>
+         <table className="data-table">
+           <thead>
+             <tr>
+               <th>Email</th>
+               <th>Nome Completo</th>
+               <th>Função</th>
+               <th>Data de Criação</th>
+               <th>Ações</th>
+             </tr>
+           </thead>
+           <tbody>
+             {users.length === 0 ? (
+               <tr><td colSpan={5}>Nenhum utilizador encontrado.</td></tr>
+             ) : (
+               users.map((u) => (
+                 <tr key={u.id}>
+                   <td>{u.email}</td>
+                   <td>{u.Profile?.nomeCompleto || 'Não preenchido'}</td>
+                   <td>{u.role}</td>
+                   <td>{new Date(u.createdAt).toLocaleString('pt-BR')}</td>
+                   <td className="actions-cell">
+                      <button className="btn-icon warning" title="Editar" onClick={() => openEditModal(u)}>
+                        <IconEdit />
+                      </button>
+                      <button className="btn-icon" title="Remover" onClick={() => openDeleteModal(u)}>
+                        <IconDelete />
+                      </button>
+                   </td>
+                 </tr>
+               ))
+             )}
+           </tbody>
+         </table>
+       </div>
+     </main>
+
+     <ConfirmationModal
+       isOpen={showEditModal}
+       onClose={() => setShowEditModal(false)}
+       onConfirm={handleEditSave}
+       title="Editar Utilizador"
+       confirmButtonText="Salvar"
+       confirmButtonClass="btn-primary"
+       message={(
+         <>
+           <div className="form-item">
+             <label>Email</label>
+             <input type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} />
+           </div>
+           <div className="form-item">
+             <label>Função</label>
+             <select value={editData.role} onChange={(e) => setEditData({ ...editData, role: e.target.value })}>
+               <option value="USER">Utilizador</option>
+               <option value="MODERATOR">Moderador</option>
+               <option value="ADMIN">Administrador</option>
+             </select>
+           </div>
+         </>
+       )}
+     />
+
+     <ConfirmationModal
+       isOpen={showDeleteModal}
+       onClose={() => setShowDeleteModal(false)}
+       onConfirm={handleDelete}
+       title="Confirmar Remoção"
+       message={`Deseja mesmo remover o utilizador ${selectedUser?.email}?`}
+     />
+   </>
+ );
 }

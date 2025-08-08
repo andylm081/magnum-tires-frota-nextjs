@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 // --- Ícones para os campos do formulário ---
 const UserIcon = () => (
@@ -24,7 +26,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Novo estado para o carregamento
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setIsMounted(true);
@@ -33,18 +37,32 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true); // Ativa o estado de carregamento
 
-    if (!email || !password) {
-      setError('Por favor, preencha o e-mail e a senha.');
-      return;
+    try {
+      // A função signIn agora é a única responsável pela validação
+      const result = await signIn('credentials', {
+        redirect: false, // Importante para mantermos o controlo
+        email,
+        password,
+      });
+
+      if (result?.error) {
+        // O erro agora vem diretamente do NextAuth (ex: "Senha incorreta")
+        setError('E-mail ou senha incorretos. Por favor, tente novamente.');
+        setIsLoading(false); // Desativa o carregamento em caso de erro
+      } else {
+        // Se o login for bem-sucedido, redireciona para o dashboard
+        router.push('/');
+      }
+    } catch (err) {
+      setError('Ocorreu um erro inesperado. Tente novamente mais tarde.');
+      setIsLoading(false);
     }
-
-    console.log('Tentativa de login com:', { email, password });
-    // Lógica de autenticação
   };
 
   if (!isMounted) {
-    return null; // Evita o erro de hidratação ao não renderizar nada no servidor e na primeira renderização do cliente
+    return null; // Evita erro de hidratação
   }
 
   return (
@@ -57,7 +75,7 @@ export default function LoginPage() {
         .btn-login {
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .btn-login:hover {
+        .btn-login:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 4px 15px rgba(217, 37, 45, 0.4);
         }
@@ -79,15 +97,13 @@ export default function LoginPage() {
           backgroundSize: 'cover',
           backgroundPosition: 'center',
       }}>
-        {/* Overlay escuro (agora mais claro) */}
         <div style={{
           position: 'absolute',
           top: 0, left: 0, width: '100%', height: '100%',
-          backgroundColor: 'rgba(10, 10, 10, 0.4)', // Opacidade reduzida para 0.4
+          backgroundColor: 'rgba(10, 10, 10, 0.4)',
           backdropFilter: 'blur(5px)'
         }} />
 
-        {/* Cartão de Login (sem efeito de inclinação) */}
         <div 
           style={{
             position: 'relative',
@@ -99,7 +115,6 @@ export default function LoginPage() {
             boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
             color: 'var(--magnum-text-dark, #333333)',
             zIndex: 2,
-            transition: 'transform 0.3s ease-out', // Transição suave para outros efeitos (ex: hover)
           }}
         >
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -128,6 +143,8 @@ export default function LoginPage() {
                 type="email"
                 className="input-field"
                 placeholder="E-mail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 style={{ 
                   width: '100%',
                   padding: '0.8rem 1rem 0.8rem 3rem',
@@ -135,8 +152,7 @@ export default function LoginPage() {
                   color: 'var(--magnum-text-dark, #333333)', 
                   border: '1px solid var(--magnum-border-light, #e0e0e0)',
                   borderRadius: 'var(--magnum-border-radius, 6px)',
-                  fontSize: '1rem',
-                  transition: 'border-color 0.3s, box-shadow 0.3s'
+                  fontSize: '1rem'
                 }}
               />
             </div>
@@ -148,6 +164,8 @@ export default function LoginPage() {
                 type="password"
                 className="input-field"
                 placeholder="Senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 style={{ 
                   width: '100%',
                   padding: '0.8rem 1rem 0.8rem 3rem',
@@ -155,8 +173,7 @@ export default function LoginPage() {
                   color: 'var(--magnum-text-dark, #333333)', 
                   border: '1px solid var(--magnum-border-light, #e0e0e0)',
                   borderRadius: 'var(--magnum-border-radius, 6px)',
-                  fontSize: '1rem',
-                  transition: 'border-color 0.3s, box-shadow 0.3s'
+                  fontSize: '1rem'
                 }}
               />
             </div>
@@ -171,8 +188,8 @@ export default function LoginPage() {
 
             {error && <p className="form-feedback-message error" style={{textAlign: 'center', marginBottom: '1rem'}}>{error}</p>}
 
-            <button type="submit" className="btn btn-primary btn-login" style={{ width: '100%', padding: '0.9rem'}}>
-              Entrar
+            <button type="submit" className="btn btn-primary btn-login" disabled={isLoading} style={{ width: '100%', padding: '0.9rem'}}>
+              {isLoading ? 'A entrar...' : 'Entrar'}
             </button>
           </form>
         </div>

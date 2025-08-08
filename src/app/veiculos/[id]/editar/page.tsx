@@ -1,16 +1,17 @@
+// src/app/veiculos/[id]/editar/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, ChangeEvent, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import FormPageLayout from '@/components/FormPageLayout';
 import { useCurrencyInput } from '@/hooks/useCurrencyInput';
 import ConfirmationModal from '@/components/ConfirmationModal';
 
-// Tipagem para os anexos
+// Tipagens
 type Anexo = { url: string; fileName: string; filePath: string };
+type Empresa = { id: string; razao_social: string };
 
-// Tipagem para o formulário de veículo
 type VeiculoFormData = {
   placa: string;
   renavam: string;
@@ -23,7 +24,7 @@ type VeiculoFormData = {
   estado_uf: string;
   cidade: string;
   status_veiculo: string;
-  empresa_responsavel: string;
+  empresa_responsavel: string; // Armazenará a razão social
   gestor_responsavel: string;
   apoio_gestao: string;
   centro_custo_veiculo: string;
@@ -37,35 +38,20 @@ type VeiculoFormData = {
   anexos: Anexo[];
 };
 
-// Ícones usados no formulário
-const IconSalvar = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="currentColor">
-    <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
-  </svg>
-);
-const IconAnexo = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="currentColor">
-    <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5S13.5 3.62 13.5 5v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 2.76 2.24 5 5 5s5-2.24 5-5V6h-1.5z"/>
-  </svg>
-);
-const IconRemoverAnexo = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-  </svg>
-);
+// Ícones
+const IconSalvar = () => <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>;
+const IconAnexo = () => <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="currentColor"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5S13.5 3.62 13.5 5v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 2.76 2.24 5 5 5s5-2.24 5-5V6h-1.5z"/></svg>;
+const IconRemoverAnexo = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>;
 
-// Formata string de data para input[type="date"]
 const formatDateForInput = (dateString: string) => {
   if (!dateString) return '';
   const d = new Date(dateString.includes('T') ? dateString : dateString + 'T00:00:00Z');
   return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
 };
 
-// Opções de dropdown
 const statusOptions = ['Disponível', 'Em uso', 'Em manutenção', 'Devolvido'];
 const finalidadeOptions = ['COMERCIAL', 'CTC', 'USO DA UNIDADE (FILIAL)'];
 
-// Estado inicial do formulário
 const initialFormState: VeiculoFormData = {
   placa: '',
   renavam: '',
@@ -98,6 +84,7 @@ export default function PaginaEditarVeiculo() {
   const veiculoId = params?.id as string;
 
   const [formData, setFormData] = useState<VeiculoFormData>(initialFormState);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: string; message: string }>({ type: '', message: '' });
@@ -113,15 +100,22 @@ export default function PaginaEditarVeiculo() {
     setValue: setCurrencyValue,
   } = useCurrencyInput();
 
-  // Busca os dados do veículo e preenche o formulário
-  const fetchVeiculoData = useCallback(async () => {
+  const fetchInitialData = useCallback(async () => {
     if (!veiculoId) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/veiculos/${veiculoId}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Erro ao buscar dados do veículo.');
-      // Mapeia cada campo
+      const [veiculoRes, empresasRes] = await Promise.all([
+        fetch(`/api/veiculos/${veiculoId}`),
+        fetch('/api/empresas')
+      ]);
+
+      if (!veiculoRes.ok) throw new Error('Erro ao buscar dados do veículo.');
+      if (!empresasRes.ok) throw new Error('Erro ao buscar lista de empresas.');
+
+      const data = await veiculoRes.json();
+      const empresasData = await empresasRes.json();
+      setEmpresas(empresasData);
+      
       const mapped: VeiculoFormData = {
         placa: data.placa ?? '',
         renavam: data.renavam ?? '',
@@ -155,6 +149,7 @@ export default function PaginaEditarVeiculo() {
       };
       setFormData(mapped);
       setCurrencyValue(mapped.valor_mensal);
+
     } catch (e: any) {
       setFeedback({ type: 'error', message: e.message });
     } finally {
@@ -163,10 +158,9 @@ export default function PaginaEditarVeiculo() {
   }, [veiculoId, setCurrencyValue]);
 
   useEffect(() => {
-    fetchVeiculoData();
-  }, [fetchVeiculoData]);
+    fetchInitialData();
+  }, [fetchInitialData]);
 
-  // Handlers genéricos
   const handleChange = (e: React.ChangeEvent<any>) => {
     const { name, value } = e.target;
     setErrors(prev => ({ ...prev, [name]: '' }));
@@ -175,13 +169,16 @@ export default function PaginaEditarVeiculo() {
       [name]: name === 'placa' ? value.toUpperCase().trim() : value,
     }));
   };
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) setSelectedFiles(Array.from(e.target.files));
   };
+  
   const handleOpenRemoveAnexoModal = (a: Anexo) => {
     setAnexoToDelete(a);
     setIsAnexoConfirmModalOpen(true);
   };
+  
   const executeDeleteAnexo = async () => {
     if (!anexoToDelete) return;
     try {
@@ -204,11 +201,11 @@ export default function PaginaEditarVeiculo() {
       setAnexoToDelete(null);
     }
   };
+
   const handleRemoveNewFile = (f: File) => {
     setSelectedFiles(prev => prev.filter(x => x !== f));
   };
 
-  // Validação
   const validateForm = () => {
     const errs: Record<string,string> = {};
     const required: Record<string,string> = {
@@ -228,7 +225,6 @@ export default function PaginaEditarVeiculo() {
     return errs;
   };
 
-  // Submissão
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFeedback({ type: '', message: '' });
@@ -238,7 +234,7 @@ export default function PaginaEditarVeiculo() {
       return;
     }
     setIsSubmitting(true);
-    // Upload novos anexos
+    
     let anexosAtual = [...formData.anexos];
     if (selectedFiles.length) {
       const fd = new FormData();
@@ -252,7 +248,7 @@ export default function PaginaEditarVeiculo() {
       }
       anexosAtual = anexosAtual.concat(json.files);
     }
-    // Prepara payload
+    
     const payload = {
       ...formData,
       valor_mensal: valorMensalNumeric,
@@ -263,9 +259,8 @@ export default function PaginaEditarVeiculo() {
         ? parseInt(formData.periodo_contrato_meses)
         : null,
     };
-    // Remove strings vazias
     Object.entries(payload).forEach(([k,v]) => { if (v === '') (payload as any)[k] = null });
-    // Envia
+    
     try {
       const res = await fetch(`/api/veiculos/${veiculoId}`, {
         method: 'PUT',
@@ -386,7 +381,19 @@ export default function PaginaEditarVeiculo() {
             </div>
             <div className="form-item">
               <label>Empresa Responsável *</label>
-              <input name="empresa_responsavel" value={formData.empresa_responsavel} onChange={handleChange} />
+              <select 
+                name="empresa_responsavel" 
+                value={formData.empresa_responsavel} 
+                onChange={handleChange}
+                required
+              >
+                <option value="" disabled>Selecione uma empresa</option>
+                {empresas.map(empresa => (
+                  <option key={empresa.id} value={empresa.razao_social}>
+                    {empresa.razao_social}
+                  </option>
+                ))}
+              </select>
               {renderError('empresa_responsavel')}
             </div>
             <div className="form-item">

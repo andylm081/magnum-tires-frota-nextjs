@@ -96,7 +96,6 @@ h1,h2,h3,h4,h5,h6 { font-weight: 600; margin: 0; }
 
 .app-footer {
   text-align: center; padding: var(--space-4) var(--space-6);
-  background-color: var(--magnum-white);
   border-top: 1px solid var(--magnum-border-light);
   color: var(--magnum-text-light); font-size: 0.875rem;
 }

@@ -1,7 +1,7 @@
-// src/app/empresas/novo/page.js
+// src/app/empresas/novo/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, ChangeEvent, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import FormPageLayout from '@/components/FormPageLayout';
@@ -11,10 +11,25 @@ const IconSalvar = () => <svg xmlns="http://www.w3.org/2000/svg" height="18" vie
 const IconAnexo = () => <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="currentColor"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5S13.5 3.62 13.5 5v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 2.76 2.24 5 5 5s5-2.24 5-5V6h-1.5z"/></svg>;
 const IconRemoverAnexo = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>;
 
+interface EmpresaFormData {
+  razao_social: string;
+  nome_fantasia: string;
+  cnpj: string;
+  inscricao_estadual: string;
+  inscricao_municipal: string;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  observacoes: string;
+}
 
 export default function NovaEmpresaPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EmpresaFormData>({
     razao_social: '',
     nome_fantasia: '',
     cnpj: '',
@@ -31,35 +46,36 @@ export default function NovaEmpresaPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
-  const [errors, setErrors] = useState({});
-  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [errors, setErrors] = useState<Partial<Record<keyof EmpresaFormData, string>>>({});
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
+    if (errors[name as keyof EmpresaFormData]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
     }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
         setSelectedFiles(Array.from(e.target.files));
     }
   };
   
-  const handleRemoveNewFile = (fileToRemove) => {
+  const handleRemoveNewFile = (fileToRemove: File) => {
     setSelectedFiles(prevFiles => prevFiles.filter(file => file !== fileToRemove));
   };
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: Partial<Record<keyof EmpresaFormData, string>> = {};
     if (!formData.razao_social) newErrors.razao_social = "O campo Razão Social é obrigatório.";
     if (!formData.cnpj) newErrors.cnpj = "O campo CNPJ é obrigatório.";
+    if (!formData.cidade) newErrors.cidade = "O campo Cidade é obrigatório.";
     return newErrors;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFeedback({ type: '', message: '' });
 
@@ -82,7 +98,7 @@ export default function NovaEmpresaPage() {
             const uploadResult = await uploadResponse.json();
             if (!uploadResponse.ok) throw new Error(uploadResult.error || 'Falha no upload dos anexos.');
             uploadedFiles = uploadResult.files;
-        } catch (uploadError) {
+        } catch (uploadError: any) {
             setFeedback({ type: 'error', message: uploadError.message });
             setIsSubmitting(false);
             return;
@@ -92,7 +108,7 @@ export default function NovaEmpresaPage() {
     const payload = { ...formData, anexos: uploadedFiles };
     
     Object.keys(payload).forEach(key => {
-        if (payload[key] === '') payload[key] = null;
+        if ((payload as any)[key] === '') (payload as any)[key] = null;
     });
 
     try {
@@ -106,14 +122,14 @@ export default function NovaEmpresaPage() {
       
       setFeedback({ type: 'success', message: 'Empresa adicionada com sucesso! Redirecionando...' });
       setTimeout(() => router.push('/empresas'), 2000);
-    } catch (error) {
+    } catch (error: any) {
       setFeedback({ type: 'error', message: error.message });
     } finally {
       setIsSubmitting(false);
     }
   };
   
-  const renderError = (fieldName) => {
+  const renderError = (fieldName: keyof EmpresaFormData) => {
     if (errors[fieldName]) {
         return <small style={{ color: 'var(--magnum-red-status)', marginTop: 'var(--space-2)' }}>{errors[fieldName]}</small>;
     }
@@ -166,8 +182,12 @@ export default function NovaEmpresaPage() {
                 <div className="form-item"><label htmlFor="numero">Número</label><input type="text" id="numero" name="numero" value={formData.numero} onChange={handleChange} /></div>
                 <div className="form-item"><label htmlFor="complemento">Complemento</label><input type="text" id="complemento" name="complemento" value={formData.complemento} onChange={handleChange} /></div>
                 <div className="form-item"><label htmlFor="bairro">Bairro</label><input type="text" name="bairro" id="bairro" value={formData.bairro} onChange={handleChange} /></div>
-                <div className="form-item"><label htmlFor="cidade">Cidade</label><input type="text" name="cidade" id="cidade" value={formData.cidade} onChange={handleChange} /></div>
-                <div className="form-item"><label htmlFor="uf">UF</label><input type="text" id="uf" name="uf" value={formData.uf} onChange={handleChange} maxLength="2" /></div>
+                <div className="form-item">
+                  <label htmlFor="cidade">Cidade <span style={{color: 'var(--magnum-red-status)'}}>*</span></label>
+                  <input type="text" name="cidade" id="cidade" value={formData.cidade} onChange={handleChange} style={errors.cidade ? { borderColor: 'var(--magnum-red-status)' } : {}}/>
+                  {renderError('cidade')}
+                </div>
+                <div className="form-item"><label htmlFor="uf">UF</label><input type="text" id="uf" name="uf" value={formData.uf} onChange={handleChange} maxLength={2} /></div>
             </div>
           </div>
 
@@ -203,7 +223,7 @@ export default function NovaEmpresaPage() {
           
           <div className="form-section">
             <h2 className="section-title">Observações</h2>
-            <div className="form-item"><textarea id="observacoes" name="observacoes" value={formData.observacoes} onChange={handleChange} rows="4"></textarea></div>
+            <div className="form-item"><textarea id="observacoes" name="observacoes" value={formData.observacoes} onChange={handleChange} rows={4}></textarea></div>
           </div>
         </form>
     </FormPageLayout>

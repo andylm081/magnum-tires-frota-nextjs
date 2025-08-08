@@ -1,13 +1,14 @@
 // src/app/api/auth/[...nextauth]/route.ts
+
+export const runtime = 'nodejs';
+
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import prisma from '@/lib/prisma'; // Usar o cliente Prisma singleton
+import prisma from '@/lib/prisma';
 import { compare } from 'bcryptjs';
 import { AuthOptions } from 'next-auth';
 
 export const authOptions: AuthOptions = {
-  // O PrismaAdapter não é necessário quando se usa apenas o provider de credenciais.
-  // A lógica de 'authorize' já faz a ligação com o banco de dados.
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -20,7 +21,6 @@ export const authOptions: AuthOptions = {
           throw new Error('Por favor, forneça o e-mail e a senha.');
         }
 
-        // 1. Encontrar o utilizador no banco de dados pelo e-mail
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
@@ -29,7 +29,6 @@ export const authOptions: AuthOptions = {
           throw new Error('Utilizador não encontrado ou senha não configurada.');
         }
 
-        // 2. Comparar a senha fornecida com o hash armazenado
         const isPasswordCorrect = await compare(
           credentials.password,
           user.passwordHash
@@ -39,7 +38,6 @@ export const authOptions: AuthOptions = {
           throw new Error('Senha incorreta.');
         }
 
-        // 3. Se tudo estiver correto, retornar os dados do utilizador para a sessão
         return {
           id: user.id,
           email: user.email,
@@ -52,27 +50,27 @@ export const authOptions: AuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    // Adiciona o ID e a role ao token JWT
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role; // O 'as any' é para contornar um problema de tipo do NextAuth
+        // A conversão 'as any' ajuda o TypeScript a aceitar a propriedade 'role'
+        token.role = (user as any).role;
       }
       return token;
     },
-    // Adiciona o ID e a role à sessão do cliente para que possamos usá-los na UI
     async session({ session, token }) {
+      // Adicionamos as propriedades do token à sessão
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
       }
       return session;
     }
   },
   pages: {
-    signIn: '/login', // Aponta para a sua página de login personalizada
+    signIn: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET, // Variável de ambiente para segurança
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);

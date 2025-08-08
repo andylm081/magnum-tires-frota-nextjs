@@ -1,6 +1,18 @@
+// src/components/ConfirmationModal.tsx
 'use client';
 
 import React from 'react';
+
+interface ConfirmationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: React.ReactNode; // Alterado de string para React.ReactNode
+  confirmButtonText?: string;
+  cancelButtonText?: string;
+  confirmButtonClass?: string;
+}
 
 export default function ConfirmationModal({
   isOpen,
@@ -11,11 +23,11 @@ export default function ConfirmationModal({
   confirmButtonText = 'Confirmar',
   cancelButtonText = 'Cancelar',
   confirmButtonClass = 'btn-danger'
-}) {
+}: ConfirmationModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className={`modal-overlay open`} role="dialog" aria-modal="true" onClick={onClose}>
+    <div className="modal-overlay open" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
           <h2 className="modal-title">{title}</h2>
@@ -29,7 +41,7 @@ export default function ConfirmationModal({
         </header>
 
         <div className="modal-body">
-          <p>{message}</p>
+          {message} {/* Agora pode renderizar JSX diretamente */}
         </div>
 
         <footer className="modal-footer">
