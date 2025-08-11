@@ -28,14 +28,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+// ✅ Alteração mínima: remover tipagem estrita do segundo argumento
+export async function DELETE(request: Request, context: any) {
     const session = await getServerSession(authOptions);
     if (session?.user?.role !== 'ADMIN') {
         return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
     try {
-        const userId = params.id;
+        const userId = context.params.id;
         await prisma.user.delete({
             where: { id: userId },
         });
