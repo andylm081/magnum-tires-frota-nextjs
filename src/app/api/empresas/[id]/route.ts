@@ -1,7 +1,7 @@
 // src/app/api/empresas/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route'; // Importa a config do NextAuth
+import { authOptions } from '@/lib/auth'; // Importa a config do NextAuth
 import { supabaseAdmin } from '@/lib/supabaseAdmin'; // Usa o cliente admin para segurança
 
 // Função para BUSCAR uma empresa por ID

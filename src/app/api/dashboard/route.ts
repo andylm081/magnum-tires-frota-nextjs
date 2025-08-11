@@ -1,7 +1,7 @@
 // src/app/api/dashboard/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function GET(request: Request) {

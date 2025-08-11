@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import crypto from 'crypto';
 import emailjs from '@emailjs/nodejs';

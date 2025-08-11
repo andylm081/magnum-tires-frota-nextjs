@@ -1,7 +1,7 @@
 // src/app/api/empresas/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]/route'; // Importa a config do NextAuth
+import { authOptions } from '@/lib/auth'; // Importa a config do NextAuth
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Função para LISTAR todas as empresas (GET)
