@@ -3,10 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "postinstall": "prisma generate",
+    "build": "prisma migrate deploy && next build",
+    "start": "next start"
   },
   "dependencies": {
     "@emailjs/nodejs": "^5.0.2",
@@ -42,18 +41,15 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@types/node": "^24.1.0",
+    "@types/node": "^24.2.1",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
-  }
-  ,"scripts": {
-    "postinstall": "prisma generate",
-    "build": "prisma migrate deploy && next build",
-    "start": "next start"
+    "typescript": "^5.9.2"
   }
 }
