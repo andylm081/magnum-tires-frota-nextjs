@@ -1,64 +1,45 @@
-export const runtime = 'nodejs';
+// src/lib/auth.ts
+import type { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import prisma from "@/lib/prisma";
 
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../auth/[...nextauth]/route';
-import prisma from '@/lib/prisma';
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
 
-// PATCH - Atualizar usuário
-export async function PATCH(
-  request: Request,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params;
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
 
-  const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
-  }
+        if (!user) return null;
 
-  try {
-    const { email, role } = await request.json();
+        // Aqui você adiciona sua lógica de verificação de senha
+        // Ex: bcrypt.compare(credentials.password, user.hashedPassword)
 
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: { email, role },
-    });
-
-    return NextResponse.json(updatedUser, { status: 200 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Erro ao atualizar utilizador.' },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE - Remover usuário
-export async function DELETE(
-  request: Request,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params;
-
-  const session = await getServerSession(authOptions);
-  if (session?.user?.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
-  }
-
-  try {
-    await prisma.user.delete({
-      where: { id },
-    });
-
-    return NextResponse.json(
-      { message: 'Utilizador removido com sucesso.' },
-      { status: 200 }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Erro ao remover utilizador.' },
-      { status: 500 }
-    );
-  }
-}
+        return user;
+      },
+    }),
+  ],
+  session: {
+    strategy: "jwt",
+  },
+  callbacks: {
+    async session({ session, token }) {
+      if (session.user && token.sub) {
+        session.user.id = token.sub;
+      }
+      return session;
+    },
+  },
+};
