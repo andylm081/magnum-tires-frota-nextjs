@@ -1,19 +1,18 @@
-// src/app/api/admin/users/[id]/route.ts
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth'; // ✅ apenas IMPORT, sem export
+import { authOptions } from '@/lib/auth'; // ✅ apenas import
 import prisma from '@/lib/prisma';
 
-// PATCH - Atualizar usuário
+// PATCH
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-
   const session = await getServerSession(authOptions);
+
   if (session?.user?.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
   }
@@ -30,14 +29,14 @@ export async function PATCH(
   }
 }
 
-// DELETE - Remover usuário
+// DELETE
 export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-
   const session = await getServerSession(authOptions);
+
   if (session?.user?.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
   }
