@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth'; // Importa a config do NextAuth
 import { supabaseAdmin } from '@/lib/supabaseAdmin'; // Usa o cliente admin para segurança
 
 // Função para BUSCAR uma empresa por ID
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: any) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
