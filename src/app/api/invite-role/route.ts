@@ -1,14 +1,21 @@
-// /api/admin/invite-role.js
-
+// src/app/api/invite-role/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+
 export const runtime = 'nodejs';
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string
+);
 
-export default async function handler(req, res) {
-  const { token } = req.query;
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const token = searchParams.get('token');
 
-  if (!token) return res.status(400).json({ error: 'Token não fornecido' });
+  if (!token) {
+    return NextResponse.json({ error: 'Token não fornecido' }, { status: 400 });
+  }
 
   const { data, error } = await supabase
     .from('convites')
@@ -17,8 +24,11 @@ export default async function handler(req, res) {
     .single();
 
   if (error || !data) {
-    return res.status(404).json({ error: 'Convite não encontrado ou expirado' });
+    return NextResponse.json(
+      { error: 'Convite não encontrado ou expirado' },
+      { status: 404 }
+    );
   }
 
-  return res.status(200).json({ role: data.role });
+  return NextResponse.json({ role: data.role }, { status: 200 });
 }
