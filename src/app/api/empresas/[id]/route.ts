@@ -4,22 +4,19 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-function getIdFromParams(params: Record<string, string | string[]>) {
-  const val = params.id;
+function getId(params: any) {
+  const val = params?.id;
   return Array.isArray(val) ? val[0] : val;
 }
 
 // GET /api/empresas/[id]
-export async function GET(
-  request: NextRequest,
-  context: { params: Record<string, string | string[]> }
-) {
+export async function GET(request: NextRequest, { params }: any) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
-  const id = getIdFromParams(context.params);
+  const id = getId(params);
   try {
     const { data, error } = await supabaseAdmin
       .from('empresas')
@@ -43,16 +40,13 @@ export async function GET(
 }
 
 // PUT /api/empresas/[id]
-export async function PUT(
-  request: NextRequest,
-  context: { params: Record<string, string | string[]> }
-) {
+export async function PUT(request: NextRequest, { params }: any) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
-  const id = getIdFromParams(context.params);
+  const id = getId(params);
   try {
     const empresaData = await request.json();
 
@@ -77,16 +71,13 @@ export async function PUT(
 }
 
 // DELETE /api/empresas/[id]
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Record<string, string | string[]> }
-) {
+export async function DELETE(request: NextRequest, { params }: any) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
-  const id = getIdFromParams(context.params);
+  const id = getId(params);
   try {
     const { error } = await supabaseAdmin.from('empresas').delete().eq('id', id);
 
